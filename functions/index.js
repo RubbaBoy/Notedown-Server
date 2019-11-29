@@ -50,8 +50,7 @@ exports.getCategories = functions.https.onCall((input, context) => {
 
 exports.editNote = functions.https.onCall((input, context) => {
     return new Promise((resolve, reject) => {
-        let uid = context.auth.uid;
-        let notesCollection = db.collection('users').doc(uid).collection('notes');
+        let notesCollection = db.collection('users').doc(context.auth.uid).collection('notes');
         let creating = input.id === undefined;
         let editingId = input.id || uuidv4();
         let categoryId = input.category;
@@ -74,6 +73,27 @@ exports.editNote = functions.https.onCall((input, context) => {
         }).catch(rej => {
             console.error(rej);
             resolve({success: false, error: rej.toString()});
+        });
+    });
+});
+
+exports.getNotes = functions.https.onCall((input, context) => {
+    return new Promise((resolve, reject) => {
+        let getAll = !!!input.category;
+        let uidDoc = db.collection('users').doc(context.auth.uid).collection('notes');
+        uidDoc.get().then(snapshot => {
+            let notes = [];
+            snapshot.docs.forEach((doc) => {
+                let data = doc.data();
+                if (getAll || data.category === input.category) {
+                    data.id = doc.id;
+                    notes.push(data);
+                }
+            });
+            resolve({success: true, notes: notes});
+        }).catch(rej => {
+            console.error(rej);
+            resolve({success: false, error: rej.toString(), notes: []});
         });
     });
 });
